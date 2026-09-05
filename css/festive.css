@@ -1,0 +1,175 @@
+/* Festive Bengali Durga Puja Aesthetics - Sharod Sathi (শারদ সাথী) */
+
+:root {
+  /* Festive Palette */
+  --festive-crimson: #D90429;
+  --festive-crimson-dark: #9B111E;
+  --festive-crimson-glow: rgba(217, 4, 41, 0.4);
+
+  --festive-gold: #FFB800;
+  --festive-gold-light: #FDE047;
+  --festive-gold-dark: #D97706;
+  --festive-gold-glow: rgba(255, 184, 0, 0.35);
+
+  --festive-terracotta: #D35400;
+  --festive-marigold: #F59E0B;
+  --festive-kash-white: #FFFDF9;
+
+  /* Night Festival Dark Palette */
+  --bg-dark-900: #0D0E15;
+  --bg-dark-800: #141622;
+  --bg-dark-700: #1C1F30;
+  --bg-dark-600: #262B42;
+  --bg-card: rgba(24, 27, 42, 0.88);
+  --bg-card-hover: rgba(33, 38, 58, 0.95);
+
+  --border-subtle: rgba(255, 184, 0, 0.15);
+  --border-gold: rgba(255, 184, 0, 0.4);
+  --border-crimson: rgba(217, 4, 41, 0.4);
+
+  /* Typography Colors */
+  --text-primary: #FFFFFF;
+  --text-secondary: #CBD5E1;
+  --text-muted: #94A3B8;
+  --text-gold: #FCD34D;
+
+  /* Shadows & Glows */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 12px 35px rgba(0, 0, 0, 0.6);
+  --glow-gold: 0 0 18px rgba(255, 184, 0, 0.35);
+  --glow-crimson: 0 0 20px rgba(217, 4, 41, 0.45);
+}
+
+/* Alpona Ornamental Header Motif */
+.alpona-divider {
+  height: 6px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    var(--festive-gold) 20%, 
+    var(--festive-crimson) 50%, 
+    var(--festive-gold) 80%, 
+    transparent 100%
+  );
+  opacity: 0.85;
+}
+
+/* Festive Badges */
+.badge-festive {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, rgba(217, 4, 41, 0.25), rgba(255, 184, 0, 0.2));
+  border: 1px solid var(--border-gold);
+  color: var(--text-gold);
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* Golden Shimmer Animation */
+@keyframes goldPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 184, 0, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 12px rgba(255, 184, 0, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 184, 0, 0);
+  }
+}
+
+@keyframes crimsonPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(217, 4, 41, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 14px rgba(217, 4, 41, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(217, 4, 41, 0);
+  }
+}
+
+/* Micro-animations */
+.hover-lift {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg), var(--glow-gold);
+}
+
+/* Zone Specific Badges */
+.zone-pill, .zone-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.zone-north {
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(59, 130, 246, 0.45);
+  color: #93C5FD;
+}
+
+.zone-central {
+  background: rgba(245, 158, 11, 0.2);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: #FCD34D;
+}
+
+.zone-south {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  color: #FCA5A5;
+}
+
+.zone-east {
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: #6EE7B7;
+}
+
+.zone-behala {
+  background: rgba(168, 85, 247, 0.2);
+  border: 1px solid rgba(168, 85, 247, 0.45);
+  color: #D8B4FE;
+}
+
+/* Crowd Badges */
+.crowd-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.crowd-extreme {
+  background: rgba(220, 38, 38, 0.25);
+  border: 1px solid #DC2626;
+  color: #F87171;
+}
+
+.crowd-high {
+  background: rgba(234, 88, 12, 0.25);
+  border: 1px solid #EA580C;
+  color: #FB923C;
+}
+
+.crowd-moderate {
+  background: rgba(16, 185, 129, 0.25);
+  border: 1px solid #10B981;
+  color: #34D399;
+}

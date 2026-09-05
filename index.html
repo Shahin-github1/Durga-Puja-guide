@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>শারদ সাথী (Sharod Sathi) - West Bengal Durga Puja Guide & Route Navigator</title>
+  <meta name="description" content="Kolkata Durga Puja route optimizer, anti-backtracking pandal hopper, multi-modal transit guidance (auto, bus, metro), and offline PWA companion." />
+
+  <!-- PWA & Mobile Web App Meta -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#8b0000" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Sharod Sathi" />
+  <link rel="icon" type="image/png" href="assets/favicon.png" />
+  <link rel="apple-touch-icon" href="assets/icon-192.png" />
+
+  <!-- Leaflet Map CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- App Stylesheets -->
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/festive.css" />
+  <link rel="stylesheet" href="css/map.css" />
+</head>
+<body>
+
+  <!-- Top App Header -->
+  <header class="app-header">
+    <div class="container header-inner">
+      <a href="#" class="brand-wrap">
+        <span class="brand-icon">🪔</span>
+        <div class="brand-text">
+          <h1>Sharod Sathi <span class="bengali-title">শারদ সাথী</span></h1>
+          <p>Kolkata Durga Puja Guide, Smart Route Planner & Transit Companion</p>
+        </div>
+      </a>
+
+      <!-- Live Corridor Stats Chip -->
+      <div class="header-stats-bar">
+        <div class="stat-chip">
+          <span class="stat-icon">🛕</span>
+          <span id="navPandalCount">8 Pandals</span>
+        </div>
+        <span class="stat-divider">•</span>
+        <div class="stat-chip">
+          <span class="stat-icon">🛣️</span>
+          <span id="navDistance">-- km</span>
+        </div>
+        <span class="stat-divider">•</span>
+        <div class="stat-chip">
+          <span class="stat-icon">⏱️</span>
+          <span id="navDuration">--</span>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="header-actions">
+        <button id="btnInstallApp" class="btn-header btn-install-pwa">
+          <span>📲</span> Install App
+        </button>
+        <button id="btnOpenDataModal" class="btn-header btn-data-manage">
+          <span>⚙️</span> Manage Data
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Corridor & Zone Filter Bar -->
+    <section class="route-controls-section">
+      <div class="corridor-card">
+        <div class="corridor-inputs-row">
+          <div class="hub-select-group">
+            <label for="startHubSelect">
+              <span>🚀</span> Starting Point / Transit Hub:
+            </label>
+            <select id="startHubSelect" class="hub-select">
+              <!-- Populated dynamically by app.js -->
+            </select>
+          </div>
+
+          <button id="btnSwapDirection" class="btn-swap-dir" title="Swap Start and End Hubs">
+            ⇄
+          </button>
+
+          <div class="hub-select-group">
+            <label for="endHubSelect">
+              <span>🏁</span> Ending Destination Hub:
+            </label>
+            <select id="endHubSelect" class="hub-select">
+              <!-- Populated dynamically by app.js -->
+            </select>
+          </div>
+        </div>
+
+        <!-- Zone Fast Filter Pills -->
+        <div class="main-zone-pills-row">
+          <span class="zone-pills-label">Explore Zone:</span>
+          <button class="main-zone-pill active" data-zone="all">All Kolkata (45+)</button>
+          <button class="main-zone-pill" data-zone="north">North & Suburbs</button>
+          <button class="main-zone-pill" data-zone="central">Central Nodes</button>
+          <button class="main-zone-pill" data-zone="south">South Heritage</button>
+          <button class="main-zone-pill" data-zone="east">Salt Lake & East</button>
+          <button class="main-zone-pill" data-zone="behala">Behala & SW</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Interactive Leaflet Map Section -->
+    <section id="mapSection">
+      <div class="map-card-wrapper">
+        <div class="map-control-bar">
+          <div class="layer-toggles-group">
+            <label class="layer-toggle-label">
+              <input type="checkbox" class="layer-toggle-input" data-layer="food" checked />
+              <span>🍽️ Food</span>
+            </label>
+            <label class="layer-toggle-label">
+              <input type="checkbox" class="layer-toggle-input" data-layer="washrooms" checked />
+              <span>🚻 Washrooms</span>
+            </label>
+            <label class="layer-toggle-label">
+              <input type="checkbox" class="layer-toggle-input" data-layer="metro" checked />
+              <span>🚇 Metro</span>
+            </label>
+            <label class="layer-toggle-label">
+              <input type="checkbox" class="layer-toggle-input" data-layer="atms" />
+              <span>🏧 ATMs</span>
+            </label>
+            <label class="layer-toggle-label">
+              <input type="checkbox" class="layer-toggle-input" data-layer="police" />
+              <span>👮 Police</span>
+            </label>
+          </div>
+
+          <div class="map-quick-actions">
+            <button id="btnRecenterRoute" class="btn-map-control">
+              <span>🎯</span> Recenter Route
+            </button>
+          </div>
+        </div>
+
+        <div id="mapContainer"></div>
+      </div>
+    </section>
+
+    <!-- Checklist & Selection Grid -->
+    <section class="checklist-section">
+      <div id="checklistContainer"></div>
+    </section>
+
+    <!-- Step-by-Step Itinerary & Transit Guidance -->
+    <section class="itinerary-section">
+      <div id="itineraryContainer"></div>
+    </section>
+  </main>
+
+  <!-- Data Management & Cloud Sync Modal -->
+  <div id="dataModal" class="modal-overlay">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title"><span>⚙️</span> Manage Pandal Database & Sync</h3>
+        <button id="btnCloseModal" class="btn-close-modal">✕</button>
+      </div>
+
+      <div class="modal-tabs">
+        <button class="modal-tab-btn active" data-modal-tab="tabSync">🌐 Online Sync</button>
+        <button class="modal-tab-btn" data-modal-tab="tabAdd">➕ Add Pandal</button>
+        <button class="modal-tab-btn" data-modal-tab="tabJson">💾 Backup / JSON</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Tab 1: Cloud Sync -->
+        <div id="tabSync" class="modal-tab-pane" style="display: block;">
+          <p style="font-size: 0.85rem; color: #555; margin-bottom: 0.85rem;">
+            Update or refresh your pandal database with the latest crowd updates, themes, and coordinates from the cloud or local server.
+          </p>
+          <div class="form-group">
+            <label for="remoteSyncUrl">Remote Data Endpoint / URL:</label>
+            <input type="url" id="remoteSyncUrl" class="form-control" value="./data/pandals.json" />
+          </div>
+          <button id="btnTriggerSync" class="btn-primary-modal">
+            🔄 Fetch & Sync Latest Pandals
+          </button>
+          <button id="btnResetDefaults" class="btn-secondary-modal">
+            ↺ Reset Database to Original 45 Pandals
+          </button>
+          <div id="syncStatusMsg" class="status-msg"></div>
+        </div>
+
+        <!-- Tab 2: Add Custom Pandal -->
+        <div id="tabAdd" class="modal-tab-pane">
+          <form id="addPandalForm">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="newPandalName">Pandal Name (English): *</label>
+                <input type="text" id="newPandalName" class="form-control" placeholder="e.g. Mudiali Club" required />
+              </div>
+              <div class="form-group">
+                <label for="newPandalBengali">Bengali Name:</label>
+                <input type="text" id="newPandalBengali" class="form-control" placeholder="মুদিয়ালী ক্লাব" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="newPandalZone">Zone: *</label>
+                <select id="newPandalZone" class="form-control" required>
+                  <option value="north">North Kolkata</option>
+                  <option value="central">Central Kolkata</option>
+                  <option value="south" selected>South Kolkata</option>
+                  <option value="east">Salt Lake & East</option>
+                  <option value="behala">Behala & SW</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="newPandalCrowd">Crowd Rating:</label>
+                <select id="newPandalCrowd" class="form-control">
+                  <option value="Moderate">Moderate</option>
+                  <option value="High" selected>High</option>
+                  <option value="Extreme">Extreme</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="newPandalLat">Latitude: *</label>
+                <input type="number" step="0.000001" id="newPandalLat" class="form-control" placeholder="22.518..." required />
+              </div>
+              <div class="form-group">
+                <label for="newPandalLng">Longitude: *</label>
+                <input type="number" step="0.000001" id="newPandalLng" class="form-control" placeholder="88.351..." required />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="newPandalTheme">Theme / Famous For: *</label>
+              <input type="text" id="newPandalTheme" class="form-control" placeholder="Eco-friendly bamboo art and illumination" required />
+            </div>
+
+            <div class="form-group">
+              <label for="newPandalMetro">Nearest Metro / Transit Hub:</label>
+              <input type="text" id="newPandalMetro" class="form-control" placeholder="Rabindra Sarobar Metro / Kalighat" />
+            </div>
+
+            <button type="submit" class="btn-primary-modal">
+              ✓ Save Pandal to Database
+            </button>
+          </form>
+        </div>
+
+        <!-- Tab 3: Backup / JSON -->
+        <div id="tabJson" class="modal-tab-pane">
+          <p style="font-size: 0.85rem; color: #555; margin-bottom: 0.85rem;">
+            Export your customized pandal collection as a JSON file or import a backup.
+          </p>
+          <button id="btnExportJsonFile" class="btn-primary-modal">
+            📥 Download Database (JSON File)
+          </button>
+
+          <div class="form-group" style="margin-top: 1.25rem;">
+            <label for="importJsonInput">Import from JSON File:</label>
+            <input type="file" id="importJsonInput" class="form-control" accept=".json" />
+          </div>
+          <div id="importStatusMsg" class="status-msg"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet Map JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Application Bootstrap -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "name": "শারদ সাথী - Durga Puja Guide & Navigator",
+  "short_name": "শারদ সাথী",
+  "description": "Kolkata Durga Puja sequential pandal guide with anti-backtracking route planner, nearby food, toilets, metro stations, and ATMs.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0D0E15",
+  "theme_color": "#D90429",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["travel", "navigation", "lifestyle", "utilities"]
+}

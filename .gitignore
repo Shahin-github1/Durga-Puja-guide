@@ -1,0 +1,13 @@
+# Binaries and executables
+cloudflared.exe
+*.exe
+
+# System and logs
+*.log
+.DS_Store
+Thumbs.db
+.system_generated/
+
+# Scratch & temporary files
+scratch/
+*.tmp
