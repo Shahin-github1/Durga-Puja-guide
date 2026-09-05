@@ -3,6 +3,7 @@
 #mapSection {
   margin-top: 1.5rem;
   margin-bottom: 2rem;
+  position: relative;
 }
 
 .map-card-wrapper {
@@ -13,6 +14,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .map-control-bar {
@@ -95,8 +97,407 @@
 
 @media (max-width: 768px) {
   #mapContainer {
-    height: 420px;
+    height: 440px;
   }
+}
+
+/* Floating Controls Overlay on Map */
+.map-floating-overlay {
+  position: absolute;
+  top: 65px;
+  right: 14px;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.75rem;
+  pointer-events: none;
+}
+
+.map-floating-overlay button {
+  pointer-events: auto;
+}
+
+.btn-locate-me {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #1a73e8;
+  color: #1a73e8;
+  font-size: 1.25rem;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.btn-locate-me:hover {
+  background: #e8f0fe;
+  transform: scale(1.08);
+}
+
+.btn-start-nav-floating {
+  background: linear-gradient(135deg, #137333 0%, #0d652d 100%);
+  color: #ffffff;
+  padding: 0.65rem 1.15rem;
+  border-radius: 30px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  border: 2px solid #ffffff;
+  box-shadow: 0 6px 20px rgba(19, 115, 51, 0.55);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.25s ease;
+  animation: startNavGlow 2.5s infinite ease-in-out;
+}
+
+.btn-start-nav-floating:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 8px 24px rgba(19, 115, 51, 0.75);
+}
+
+@keyframes startNavGlow {
+  0%, 100% { box-shadow: 0 4px 15px rgba(19, 115, 51, 0.4); }
+  50% { box-shadow: 0 6px 25px rgba(255, 215, 0, 0.65), 0 0 12px rgba(19, 115, 51, 0.9); }
+}
+
+/* =========================================================
+   Live User GPS Location Marker with Heading Cone
+   ========================================================= */
+
+.user-gps-icon-wrap {
+  background: transparent;
+  border: none;
+}
+
+.user-gps-marker {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gps-core-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #1a73e8;
+  border: 2.5px solid #ffffff;
+  box-shadow: 0 2px 8px rgba(26, 115, 232, 0.75);
+  position: relative;
+  z-index: 3;
+}
+
+.gps-pulse-halo {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(26, 115, 232, 0.3);
+  animation: userGpsPulse 2s infinite ease-out;
+  z-index: 2;
+}
+
+@keyframes userGpsPulse {
+  0% { transform: scale(0.6); opacity: 0.9; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+/* Directional Compass Heading Beam / Cone */
+.gps-heading-beam {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  transform-origin: 30px 30px;
+  transition: transform 0.25s ease-out;
+  z-index: 1;
+}
+
+.beam-cone {
+  position: absolute;
+  top: -15px;
+  left: 10px;
+  width: 40px;
+  height: 40px;
+  background: radial-gradient(circle at 50% 100%, rgba(26, 115, 232, 0.45) 0%, rgba(26, 115, 232, 0.02) 75%, transparent 100%);
+  clip-path: polygon(50% 100%, 0% 0%, 100% 0%);
+}
+
+.user-loc-popup {
+  padding: 0.6rem;
+  font-family: 'Poppins', sans-serif;
+  text-align: center;
+}
+
+.user-loc-popup h4 {
+  color: #1a73e8;
+  margin-bottom: 0.2rem;
+  font-size: 0.95rem;
+}
+
+.user-loc-popup p {
+  font-size: 0.75rem;
+  color: #666;
+  margin-bottom: 0.5rem;
+}
+
+.popup-btn-use-start {
+  background: #1a73e8;
+  color: #ffffff;
+  border: none;
+  padding: 0.35rem 0.75rem;
+  border-radius: 15px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* =========================================================
+   Turn-by-Turn GPS Navigation HUD (Google Maps Style)
+   ========================================================= */
+
+.nav-hud-top {
+  position: fixed;
+  top: 75px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 92%;
+  max-width: 600px;
+  z-index: 2000;
+  display: none;
+  background: linear-gradient(135deg, #0d652d 0%, #137333 100%);
+  color: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.45);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  animation: slideDown 0.3s ease-out;
+}
+
+.nav-hud-inner {
+  display: flex;
+  align-items: center;
+  padding: 0.85rem 1.15rem;
+  gap: 1rem;
+  width: 100%;
+}
+
+.nav-maneuver-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+}
+
+.nav-maneuver-icon {
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1;
+}
+
+.nav-instruction-wrap {
+  flex: 1;
+}
+
+.nav-dist-remaining {
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #ffd700;
+}
+
+.nav-step-text {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin-top: 2px;
+}
+
+.nav-btn-exit {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.nav-btn-exit:hover {
+  background: #c62828;
+}
+
+/* Bottom Active Destination Sheet */
+.nav-sheet-bottom {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 92%;
+  max-width: 600px;
+  z-index: 2000;
+  display: none;
+  background: #ffffff;
+  border-radius: 18px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  border: 2px solid #137333;
+  animation: slideUp 0.3s ease-out;
+}
+
+.nav-sheet-inner {
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.nav-sheet-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.nav-stop-badge {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #137333;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.nav-target-name {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #8b0000;
+  margin-top: 1px;
+}
+
+.nav-target-bengali {
+  font-size: 0.95rem;
+  color: #e65100;
+  font-weight: 600;
+}
+
+.nav-eta-box {
+  background: #e8f5e9;
+  border: 1px solid #c8e6c9;
+  padding: 0.4rem 0.75rem;
+  border-radius: 12px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.nav-eta-time {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #137333;
+  line-height: 1.1;
+}
+
+.nav-eta-dist {
+  display: block;
+  font-size: 0.72rem;
+  color: #555;
+  font-weight: 600;
+}
+
+.nav-theme-row {
+  font-size: 0.82rem;
+  color: #444;
+  background: #fff8f0;
+  padding: 0.35rem 0.65rem;
+  border-radius: 8px;
+  border-left: 3px solid #f57c00;
+}
+
+.nav-sheet-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.2rem;
+}
+
+.nav-btn-action {
+  flex: 1;
+  min-width: 140px;
+  padding: 0.6rem 0.85rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  transition: all 0.2s ease;
+}
+
+.btn-nav-arrived {
+  background: #137333;
+  color: #ffffff;
+  box-shadow: 0 3px 10px rgba(19, 115, 51, 0.35);
+}
+
+.btn-nav-arrived:hover {
+  background: #0d652d;
+}
+
+.btn-nav-gmaps {
+  background: #1a73e8;
+  color: #ffffff;
+  box-shadow: 0 3px 10px rgba(26, 115, 232, 0.35);
+}
+
+.btn-nav-gmaps:hover {
+  background: #1557b0;
+}
+
+.btn-nav-recenter {
+  background: #f0e6dc;
+  color: #444;
+  flex: 0 0 auto;
+  min-width: unset;
+  padding: 0.6rem 0.9rem;
+}
+
+.btn-nav-recenter:hover {
+  background: #e2d2c2;
+}
+
+@keyframes slideDown {
+  from { transform: translate(-50%, -30px); opacity: 0; }
+  to { transform: translate(-50%, 0); opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translate(-50%, 30px); opacity: 0; }
+  to { transform: translate(-50%, 0); opacity: 1; }
 }
 
 /* Custom Leaflet Pins */

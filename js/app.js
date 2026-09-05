@@ -1,13 +1,14 @@
 // Sharod Sathi (শারদ সাথী) - Main Application Controller
-import { TRANSIT_HUBS } from './data/hubs.js';
-import { FOOD_SPOTS } from './data/food.js';
-import { AMENITIES } from './data/amenities.js';
-import { pandalManager } from './data/pandalManager.js';
-import { optimizeRouteSequence } from './routing/optimizer.js';
-import { PujaMapController } from './map.js';
-import { PandalChecklist } from './checklist.js';
-import { ItineraryView } from './itinerary.js';
-import { initPWA } from './pwa.js';
+import { TRANSIT_HUBS } from './data/hubs.js?v=6';
+import { FOOD_SPOTS } from './data/food.js?v=6';
+import { AMENITIES } from './data/amenities.js?v=6';
+import { pandalManager } from './data/pandalManager.js?v=6';
+import { optimizeRouteSequence } from './routing/optimizer.js?v=6';
+import { PujaMapController } from './map.js?v=6';
+import { PandalChecklist } from './checklist.js?v=6';
+import { ItineraryView } from './itinerary.js?v=6';
+import { TurnByTurnNavigation } from './navigation.js?v=6';
+import { initPWA } from './pwa.js?v=6';
 
 class SharodSathiApp {
   constructor() {
@@ -15,6 +16,10 @@ class SharodSathiApp {
     this.selectedZone = 'all';
     this.startHubId = 'hub_dumdum_jn'; // Default matching user's flagship requirement
     this.endHubId = 'hub_sealdah';     // Default matching user's flagship requirement
+
+    // User GPS state
+    this.userLocation = null;
+    this.userHeading = 0;
 
     // Initial default selected pandals for the Dum Dum -> Sealdah transit corridor
     this.selectedPandalIds = new Set([
@@ -36,6 +41,7 @@ class SharodSathiApp {
     this.mapController = null;
     this.checklist = null;
     this.itineraryView = null;
+    this.navigation = null;
 
     this.init();
   }
@@ -50,9 +56,10 @@ class SharodSathiApp {
   }
 
   initControllers() {
-    // 1. Initialize Map
+    // 1. Initialize Map with GPS tracking callback
     this.mapController = new PujaMapController('mapContainer', {
-      onPandalToggle: (id) => this.handlePandalToggle(id)
+      onPandalToggle: (id) => this.handlePandalToggle(id),
+      onLocationUpdate: (loc, heading) => this.handleLocationUpdate(loc, heading)
     });
 
     // Render all initial map layers
@@ -86,6 +93,83 @@ class SharodSathiApp {
         document.getElementById('mapSection').scrollIntoView({ behavior: 'smooth' });
       }
     });
+
+    // 4. Initialize Turn-by-Turn GPS Navigation
+    this.navigation = new TurnByTurnNavigation({
+      mapController: this.mapController,
+      onStopAdvance: (nextStop, idx) => {
+        const fromLoc = this.userLocation || this._latestRoute.orderedStops[idx - 1];
+        this.mapController.highlightActiveLeg(fromLoc, nextStop);
+      },
+      onExit: () => {
+        this.mapController.clearActiveNavHighlight();
+      }
+    });
+  }
+
+  handleLocationUpdate(loc, heading) {
+    this.userLocation = loc;
+    this.userHeading = heading;
+
+    // Pass live update to navigation engine if active
+    if (this.navigation && this.navigation.isActive) {
+      this.navigation.onUserLocationUpdate(loc, heading);
+      const target = this.navigation.getTargetStop();
+      if (target) {
+        this.mapController.highlightActiveLeg(loc, target);
+      }
+    }
+
+    // If starting from current location, dynamically update route origin
+    if (this.startHubId === 'current_location' && (!this._lastGeoTime || Date.now() - this._lastGeoTime > 15000)) {
+      this._lastGeoTime = Date.now();
+      this.calculateAndRenderRoute();
+    }
+  }
+
+  useCurrentLocationAsStart() {
+    this.startHubId = 'current_location';
+    this.populateHubSelectors();
+    this.calculateAndRenderRoute();
+    const mapSec = document.getElementById('mapSection');
+    if (mapSec) mapSec.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  startNavigation() {
+    if (!this._latestRoute || !this._latestRoute.orderedStops || this._latestRoute.orderedStops.length < 2) {
+      alert('Please select at least 1 pandal in the checklist before starting navigation.');
+      return;
+    }
+
+    const launchNav = (userLoc) => {
+      this.userLocation = userLoc;
+      this.navigation.start(this._latestRoute, this.userLocation);
+      const target = this.navigation.getTargetStop();
+      const fromLoc = this.userLocation || this._latestRoute.orderedStops[0];
+      if (target) {
+        this.mapController.highlightActiveLeg(fromLoc, target);
+      }
+    };
+
+    if (this.mapController.currentUserLocation) {
+      launchNav(this.mapController.currentUserLocation);
+    } else if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy };
+          this.mapController.currentUserLocation = loc;
+          this.mapController.renderUserLocation(loc.lat, loc.lng, loc.accuracy);
+          launchNav(loc);
+        },
+        (err) => {
+          console.warn('[Nav] GPS permission/timeout, starting from corridor origin:', err.message);
+          launchNav({ lat: this._latestRoute.orderedStops[0].lat, lng: this._latestRoute.orderedStops[0].lng });
+        },
+        { enableHighAccuracy: true, timeout: 3500 }
+      );
+    } else {
+      launchNav({ lat: this._latestRoute.orderedStops[0].lat, lng: this._latestRoute.orderedStops[0].lng });
+    }
   }
 
   attachDataModalListeners() {
@@ -231,7 +315,7 @@ class SharodSathiApp {
   }
 
   /**
-   * Populates Start & End point dropdowns with zone-aware smart suggestions
+   * Populates Start & End point dropdowns with zone-aware smart suggestions + Live GPS option
    */
   populateHubSelectors(preferredZone = this.selectedZone) {
     const startSelect = document.getElementById('startHubSelect');
@@ -247,8 +331,14 @@ class SharodSathiApp {
       return a.name.localeCompare(b.name);
     });
 
-    const generateOptions = (selectedId) => {
+    const generateOptions = (selectedId, isStart = false) => {
       let html = '';
+
+      if (isStart) {
+        const isLocSelected = selectedId === 'current_location';
+        html += `<option value="current_location" ${isLocSelected ? 'selected' : ''}>📍 My Current Location (Live GPS)</option>`;
+      }
+
       const zones = ['north', 'central', 'south', 'east', 'behala'];
       const zoneTitles = {
         north: 'North Kolkata & Suburbs',
@@ -277,8 +367,8 @@ class SharodSathiApp {
       return html;
     };
 
-    startSelect.innerHTML = generateOptions(this.startHubId);
-    endSelect.innerHTML = generateOptions(this.endHubId);
+    startSelect.innerHTML = generateOptions(this.startHubId, true);
+    endSelect.innerHTML = generateOptions(this.endHubId, false);
   }
 
   attachEventListeners() {
@@ -288,6 +378,9 @@ class SharodSathiApp {
 
     startSelect.addEventListener('change', (e) => {
       this.startHubId = e.target.value;
+      if (this.startHubId === 'current_location') {
+        this.mapController.centerOnUser(15);
+      }
       this.calculateAndRenderRoute();
     });
 
@@ -335,6 +428,29 @@ class SharodSathiApp {
         if (this._latestRoute) {
           this.mapController.renderRoute(this._latestRoute, this.selectedPandalIds);
         }
+      });
+    }
+
+    // "🎯 Locate Me" Floating Map Button
+    const btnLocateMe = document.getElementById('btnLocateMe');
+    if (btnLocateMe) {
+      btnLocateMe.addEventListener('click', () => {
+        this.mapController.centerOnUser(17);
+      });
+    }
+
+    // "🚀 Start Pandal Hopping" (Turn-by-Turn GPS Navigation Mode)
+    const btnStartNavFloating = document.getElementById('btnStartNavFloating');
+    if (btnStartNavFloating) {
+      btnStartNavFloating.addEventListener('click', () => {
+        this.startNavigation();
+      });
+    }
+
+    const btnStartNavHeader = document.getElementById('btnStartNavHeader');
+    if (btnStartNavHeader) {
+      btnStartNavHeader.addEventListener('click', () => {
+        this.startNavigation();
       });
     }
   }
@@ -386,7 +502,26 @@ class SharodSathiApp {
   }
 
   calculateAndRenderRoute() {
-    const startHub = TRANSIT_HUBS.find(h => h.id === this.startHubId) || TRANSIT_HUBS[0];
+    let startHub;
+
+    if (this.startHubId === 'current_location') {
+      if (this.userLocation) {
+        startHub = {
+          id: 'current_location',
+          name: 'My Current Location',
+          bengaliName: 'আমার বর্তমান অবস্থান',
+          lat: this.userLocation.lat,
+          lng: this.userLocation.lng,
+          type: 'Live GPS Origin',
+          zone: this.selectedZone !== 'all' ? this.selectedZone : 'central'
+        };
+      } else {
+        startHub = TRANSIT_HUBS.find(h => h.id === 'hub_dumdum_jn') || TRANSIT_HUBS[0];
+      }
+    } else {
+      startHub = TRANSIT_HUBS.find(h => h.id === this.startHubId) || TRANSIT_HUBS[0];
+    }
+
     const endHub = TRANSIT_HUBS.find(h => h.id === this.endHubId) || TRANSIT_HUBS[5];
 
     const allPandals = pandalManager.getAll();

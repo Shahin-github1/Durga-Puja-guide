@@ -1,5 +1,5 @@
 // Sharod Sathi Service Worker - PWA Offline Caching
-const CACHE_NAME = 'sharod-sathi-v2';
+const CACHE_NAME = 'sharod-sathi-v5';
 
 const ASSETS_TO_CACHE = [
   './',
@@ -12,6 +12,7 @@ const ASSETS_TO_CACHE = [
   './js/pwa.js',
   './js/checklist.js',
   './js/itinerary.js',
+  './js/navigation.js',
   './js/map.js',
   './js/data/pandals.js',
   './js/data/hubs.js',
@@ -54,11 +55,9 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const request = event.request;
-
-  // Don't intercept non-GET requests or OSRM external router API (let it go to network)
   if (request.method !== 'GET') return;
 
-  // Bypass cache for live router queries if desired, or let network-first handle it
+  // Bypass cache for external OSRM routing
   if (request.url.includes('project-osrm.org')) {
     event.respondWith(
       fetch(request).catch(() => new Response(JSON.stringify({ code: 'Offline' })))
@@ -66,22 +65,20 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network-First with Cache Fallback for dynamic/CDN content
+  // True Network-First: Fetch fresh code from server, update cache, fallback to offline cache
   event.respondWith(
-    caches.match(request).then((cachedResponse) => {
-      const fetchPromise = fetch(request)
-        .then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            const responseClone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return networkResponse;
-        })
-        .catch(() => cachedResponse);
-
-      return cachedResponse || fetchPromise;
-    })
+    fetch(request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(request, responseClone);
+          });
+        }
+        return networkResponse;
+      })
+      .catch(() => {
+        return caches.match(request);
+      })
   );
 });

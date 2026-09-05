@@ -178,8 +178,22 @@ export const BUS_ROUTES = [
  * Returns structured transit options (walk, auto, bus, metro) between two geographic stops
  */
 export function getTransitGuidance(from, to, distanceKm) {
+  if (distanceKm === undefined || distanceKm === null || isNaN(distanceKm)) {
+    if (from && to && typeof from.lat === 'number' && typeof to.lat === 'number') {
+      const dLat = (to.lat - from.lat) * Math.PI / 180;
+      const dLon = (to.lng - from.lng) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(from.lat * Math.PI / 180) * Math.cos(to.lat * Math.PI / 180) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      distanceKm = 6371 * c;
+    } else {
+      distanceKm = 1.0;
+    }
+  }
+
   const result = {
-    distanceKm: parseFloat(distanceKm.toFixed(2)),
+    distanceKm: parseFloat(Number(distanceKm).toFixed(2)),
     primaryRecommendation: "",
     walking: null,
     auto: null,

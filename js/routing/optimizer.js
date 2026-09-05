@@ -4,8 +4,8 @@ import {
   formatDistance,
   estimateWalkMinutes,
   estimateTransitMinutes
-} from './distance.js';
-import { getTransitGuidance } from '../data/transitRoutes.js';
+} from './distance.js?v=6';
+import { getTransitGuidance } from '../data/transitRoutes.js?v=6';
 
 /**
  * Optimizes a list of selected pandals from startHub to endHub
@@ -28,7 +28,7 @@ export function optimizeRouteSequence(startHub, endHub, pandals = []) {
         formattedDistance: formatDistance(defaultLegDist),
         walkMinutes: estimateWalkMinutes(defaultLegDist),
         transitMinutes: estimateTransitMinutes(defaultLegDist),
-        transitGuidance: getTransitGuidance(orderedStops[0], orderedStops[1])
+        transitGuidance: getTransitGuidance(orderedStops[0], orderedStops[1], defaultLegDist)
       }
     ];
 
@@ -144,7 +144,7 @@ export function optimizeRouteSequence(startHub, endHub, pandals = []) {
       formattedDistance: formatDistance(dist),
       walkMinutes: walkMin,
       transitMinutes: transitMin,
-      transitGuidance: getTransitGuidance(fromStop, toStop)
+      transitGuidance: getTransitGuidance(fromStop, toStop, dist)
     });
   }
 

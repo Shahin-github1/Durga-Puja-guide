@@ -1,9 +1,10 @@
-// Leaflet Map Controller with Festive Markers, Urban Amenities, OSRM Real Road Snapping & Google Maps Integration
+// Leaflet Map Controller with Festive Markers, Urban Amenities, OSRM Real Road Snapping & Live GPS Navigation
 
 export class PujaMapController {
   constructor(containerId, options = {}) {
     this.containerId = containerId;
     this.onPandalToggle = options.onPandalToggle || null;
+    this.onLocationUpdate = options.onLocationUpdate || null;
 
     // Kolkata Center (around Shyambazar / Central)
     this.defaultCenter = [22.585, 88.375];
@@ -12,15 +13,26 @@ export class PujaMapController {
     // Layer groups
     this.map = null;
     this.routeLayer = null;
+    this.activeNavLayer = null;
     this.pandalsLayer = null;
     this.hubsLayer = null;
+    this.userLocationLayer = null;
     this.foodLayer = null;
     this.washroomsLayer = null;
     this.metroLayer = null;
     this.atmsLayer = null;
     this.policeLayer = null;
 
+    // GPS & Orientation state
+    this.watchId = null;
+    this.currentUserLocation = null;
+    this.currentHeading = 0;
+    this.userMarker = null;
+    this.accuracyCircle = null;
+
     this.initMap();
+    this.initOrientationListener();
+    this.startLocationWatch();
   }
 
   initMap() {
@@ -44,8 +56,9 @@ export class PujaMapController {
       maxZoom: 19
     }).addTo(this.map);
 
-    // Initialize layer groups
+    // Initialize layer groups in z-order
     this.routeLayer = L.layerGroup().addTo(this.map);
+    this.activeNavLayer = L.layerGroup().addTo(this.map);
     this.pandalsLayer = L.layerGroup().addTo(this.map);
     this.hubsLayer = L.layerGroup().addTo(this.map);
     this.foodLayer = L.layerGroup().addTo(this.map);
@@ -53,6 +66,156 @@ export class PujaMapController {
     this.metroLayer = L.layerGroup().addTo(this.map);
     this.atmsLayer = L.layerGroup().addTo(this.map);
     this.policeLayer = L.layerGroup().addTo(this.map);
+    this.userLocationLayer = L.layerGroup().addTo(this.map);
+  }
+
+  initOrientationListener() {
+    const handleOrientation = (e) => {
+      let heading = null;
+      if (e.webkitCompassHeading !== undefined) {
+        // iOS Safari true compass heading
+        heading = e.webkitCompassHeading;
+      } else if (e.alpha !== null) {
+        // Android DeviceOrientation (counter-clockwise, convert to clockwise compass)
+        heading = 360 - e.alpha;
+      }
+
+      if (heading !== null && heading !== undefined) {
+        this.currentHeading = Math.round(heading);
+        this.updateUserMarkerHeading(this.currentHeading);
+      }
+    };
+
+    if ('ondeviceorientationabsolute' in window) {
+      window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+    } else if ('ondeviceorientation' in window) {
+      window.addEventListener('deviceorientation', handleOrientation, true);
+    }
+  }
+
+  startLocationWatch() {
+    if (!('geolocation' in navigator)) {
+      console.warn('Geolocation is not supported by this browser.');
+      return;
+    }
+
+    const geoSuccess = (pos) => {
+      const { latitude, longitude, accuracy, heading } = pos.coords;
+      this.currentUserLocation = { lat: latitude, lng: longitude, accuracy };
+
+      if (heading !== null && heading !== undefined && !isNaN(heading)) {
+        this.currentHeading = Math.round(heading);
+      }
+
+      this.renderUserLocation(latitude, longitude, accuracy, this.currentHeading);
+
+      if (this.onLocationUpdate) {
+        this.onLocationUpdate(this.currentUserLocation, this.currentHeading);
+      }
+    };
+
+    const geoError = (err) => {
+      console.warn('[GPS] Geolocation watch error / permission:', err.message);
+    };
+
+    this.watchId = navigator.geolocation.watchPosition(geoSuccess, geoError, {
+      enableHighAccuracy: true,
+      maximumAge: 2000,
+      timeout: 10000
+    });
+  }
+
+  renderUserLocation(lat, lng, accuracy, heading = 0) {
+    if (!this.map) return;
+
+    // 1. Update or create accuracy circle
+    if (!this.accuracyCircle) {
+      this.accuracyCircle = L.circle([lat, lng], {
+        radius: accuracy || 25,
+        color: '#1a73e8',
+        fillColor: '#1a73e8',
+        fillOpacity: 0.12,
+        weight: 1.5,
+        interactive: false
+      }).addTo(this.userLocationLayer);
+    } else {
+      this.accuracyCircle.setLatLng([lat, lng]);
+      this.accuracyCircle.setRadius(accuracy || 25);
+    }
+
+    // 2. Update or create user marker with directional heading cone
+    const markerHtml = `
+      <div class="user-gps-marker">
+        <div class="gps-heading-beam" style="transform: rotate(${heading}deg);">
+          <div class="beam-cone"></div>
+        </div>
+        <div class="gps-pulse-halo"></div>
+        <div class="gps-core-dot"></div>
+      </div>
+    `;
+
+    if (!this.userMarker) {
+      const userIcon = L.divIcon({
+        className: 'user-gps-icon-wrap',
+        html: markerHtml,
+        iconSize: [60, 60],
+        iconAnchor: [30, 30]
+      });
+
+      this.userMarker = L.marker([lat, lng], {
+        icon: userIcon,
+        zIndexOffset: 1000,
+        interactive: true
+      }).bindPopup(`
+        <div class="user-loc-popup">
+          <h4>📍 Your Current Location</h4>
+          <p>Accuracy: ~${Math.round(accuracy || 15)} meters</p>
+          <button class="popup-btn-use-start" onclick="window.app.useCurrentLocationAsStart()">
+            🚀 Start Tour From Here
+          </button>
+        </div>
+      `).addTo(this.userLocationLayer);
+    } else {
+      this.userMarker.setLatLng([lat, lng]);
+      const el = this.userMarker.getElement();
+      if (el) {
+        const beam = el.querySelector('.gps-heading-beam');
+        if (beam) {
+          beam.style.transform = `rotate(${heading}deg)`;
+        }
+      }
+    }
+  }
+
+  updateUserMarkerHeading(heading) {
+    if (this.userMarker) {
+      const el = this.userMarker.getElement();
+      if (el) {
+        const beam = el.querySelector('.gps-heading-beam');
+        if (beam) {
+          beam.style.transform = `rotate(${heading}deg)`;
+        }
+      }
+    }
+  }
+
+  centerOnUser(zoom = 17) {
+    if (this.currentUserLocation) {
+      this.panToLocation(this.currentUserLocation.lat, this.currentUserLocation.lng, zoom);
+    } else if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude, accuracy } = pos.coords;
+          this.currentUserLocation = { lat: latitude, lng: longitude, accuracy };
+          this.renderUserLocation(latitude, longitude, accuracy, this.currentHeading);
+          this.panToLocation(latitude, longitude, zoom);
+        },
+        (err) => {
+          alert('Unable to retrieve your current location. Please ensure location permissions are enabled in your browser/device.');
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    }
   }
 
   setLayerVisibility(layerKey, isVisible) {
@@ -82,6 +245,59 @@ export class PujaMapController {
     if (this.map) {
       this.map.setView([lat, lng], zoom, { animate: true, duration: 0.8 });
     }
+  }
+
+  /**
+   * Highlight active leg from current position to next pandal during navigation
+   */
+  async highlightActiveLeg(fromLoc, toLoc) {
+    this.activeNavLayer.clearLayers();
+    if (!fromLoc || !toLoc) return;
+
+    // Instant direct polyline
+    const directLine = L.polyline([[fromLoc.lat, fromLoc.lng], [toLoc.lat, toLoc.lng]], {
+      color: '#00b0ff',
+      weight: 6,
+      opacity: 0.9,
+      dashArray: '6, 6'
+    }).addTo(this.activeNavLayer);
+
+    // Try road snapping
+    try {
+      const url = `https://router.project-osrm.org/route/v1/driving/${fromLoc.lng.toFixed(6)},${fromLoc.lat.toFixed(6)};${toLoc.lng.toFixed(6)},${toLoc.lat.toFixed(6)}?overview=full&geometries=geojson`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.routes && data.routes[0]) {
+          const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+          this.activeNavLayer.clearLayers();
+
+          // Outer glowing route line
+          L.polyline(coords, {
+            color: '#00e5ff',
+            weight: 9,
+            opacity: 0.5,
+            lineCap: 'round',
+            lineJoin: 'round'
+          }).addTo(this.activeNavLayer);
+
+          // Inner solid active navigation line
+          L.polyline(coords, {
+            color: '#0091ea',
+            weight: 6,
+            opacity: 1,
+            lineCap: 'round',
+            lineJoin: 'round'
+          }).addTo(this.activeNavLayer);
+        }
+      }
+    } catch (e) {
+      console.warn('Active leg road snap fallback:', e.message);
+    }
+  }
+
+  clearActiveNavHighlight() {
+    this.activeNavLayer.clearLayers();
   }
 
   /**
@@ -185,7 +401,7 @@ export class PujaMapController {
       .bindPopup(`
         <div class="hub-popup">
           <h4>🚀 Starting Node: ${startHub.name}</h4>
-          <p>${startHub.bengaliName || ''} - ${startHub.type}</p>
+          <p>${startHub.bengaliName || ''} - ${startHub.type || 'Corridor Origin'}</p>
           <a href="https://www.google.com/maps/dir/?api=1&destination=${startHub.lat},${startHub.lng}" target="_blank" class="popup-btn-gmaps">🧭 Navigate to Start</a>
         </div>
       `);
@@ -208,22 +424,39 @@ export class PujaMapController {
       .bindPopup(`
         <div class="hub-popup">
           <h4>🏁 Destination Hub: ${endHub.name}</h4>
-          <p>${endHub.bengaliName || ''} - ${endHub.type}</p>
+          <p>${endHub.bengaliName || ''} - ${endHub.type || 'Destination'}</p>
           <a href="https://www.google.com/maps/dir/?api=1&destination=${endHub.lat},${endHub.lng}" target="_blank" class="popup-btn-gmaps">🧭 Navigate to End</a>
         </div>
       `);
     this.hubsLayer.addLayer(endMarker);
 
-    // 3. Fetch real road geometry from OSRM for street-snapped curving lines
+    // 3. Immediately draw a high-visibility route line so it is NEVER blank!
     const waypoints = orderedStops.map(s => [s.lat, s.lng]);
+    const fallbackPolyline = L.polyline(waypoints, {
+      color: '#ff6600',
+      weight: 6,
+      opacity: 0.9,
+      lineCap: 'round',
+      lineJoin: 'round'
+    }).addTo(this.routeLayer);
+
+    // Fit map bounds initially
+    if (waypoints.length > 0) {
+      const bounds = L.latLngBounds(waypoints);
+      this.map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+    }
+
+    // 4. Fetch real street road geometry from OSRM for curved roads
     const roadCoordinates = await this.fetchAndDrawRealRoads(orderedStops);
 
     if (roadCoordinates && roadCoordinates.length > 0) {
-      // Glow under-layer
+      this.routeLayer.clearLayers();
+
+      // Outer festive glow under-layer
       L.polyline(roadCoordinates, {
-        color: '#ff4d00',
-        weight: 8,
-        opacity: 0.35,
+        color: '#ff3d00',
+        weight: 9,
+        opacity: 0.45,
         lineCap: 'round',
         lineJoin: 'round'
       }).addTo(this.routeLayer);
@@ -231,27 +464,12 @@ export class PujaMapController {
       // Main crisp road path
       L.polyline(roadCoordinates, {
         color: '#ff6600',
-        weight: 5,
+        weight: 6,
         opacity: 0.95,
         dashArray: '8, 6',
         lineCap: 'round',
         lineJoin: 'round'
       }).addTo(this.routeLayer);
-    } else {
-      // Graceful fallback: straight dashed path
-      L.polyline(waypoints, {
-        color: '#ff6600',
-        weight: 5,
-        opacity: 0.9,
-        dashArray: '10, 8'
-      }).addTo(this.routeLayer);
-    }
-
-    // Fit map bounds to encompass the entire route
-    const allPoints = orderedStops.map(s => [s.lat, s.lng]);
-    if (allPoints.length > 0) {
-      const bounds = L.latLngBounds(allPoints);
-      this.map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
     }
   }
 

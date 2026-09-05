@@ -56,6 +56,9 @@
 
       <!-- Action Buttons -->
       <div class="header-actions">
+        <button id="btnStartNavHeader" class="btn-header btn-start-nav-header" style="background: #137333; color: #ffffff; font-weight: 700;">
+          <span>🚀</span> Start Nav
+        </button>
         <button id="btnInstallApp" class="btn-header btn-install-pwa">
           <span>📲</span> Install App
         </button>
@@ -141,9 +144,23 @@
           </div>
         </div>
 
+        <!-- Floating Action Controls Overlay on Map -->
+        <div class="map-floating-overlay">
+          <button id="btnStartNavFloating" class="btn-start-nav-floating" title="Start Turn-by-Turn Pandal Hopping Navigation">
+            <span>🚀</span> Start Pandal Hopping
+          </button>
+          <button id="btnLocateMe" class="btn-locate-me" title="Locate My GPS Position">
+            🎯
+          </button>
+        </div>
+
         <div id="mapContainer"></div>
       </div>
     </section>
+
+    <!-- Turn-by-Turn GPS Navigation Overlay Containers -->
+    <div id="navHudTop" class="nav-hud-top"></div>
+    <div id="navSheetBottom" class="nav-sheet-bottom"></div>
 
     <!-- Checklist & Selection Grid -->
     <section class="checklist-section">
@@ -274,6 +291,6 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <!-- Application Bootstrap -->
-  <script type="module" src="js/app.js"></script>
+  <script type="module" src="js/app.js?v=6"></script>
 </body>
 </html>
