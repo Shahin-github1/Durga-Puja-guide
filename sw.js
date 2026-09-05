@@ -1,5 +1,5 @@
 // Sharod Sathi Service Worker - PWA Offline Caching
-const CACHE_NAME = 'sharod-sathi-v5';
+const CACHE_NAME = 'sharod-sathi-v7';
 
 const ASSETS_TO_CACHE = [
   './',
@@ -8,6 +8,9 @@ const ASSETS_TO_CACHE = [
   './css/style.css',
   './css/festive.css',
   './css/map.css',
+  './js/config.js',
+  './js/googleMap.js',
+  './js/mapManager.js',
   './js/app.js',
   './js/pwa.js',
   './js/checklist.js',

@@ -138,6 +138,7 @@
           </div>
 
           <div class="map-quick-actions">
+            <span id="mapEngineBadge" class="engine-badge engine-osm">🟠 <strong>OpenStreetMap</strong> (Free Mode)</span>
             <button id="btnRecenterRoute" class="btn-map-control">
               <span>🎯</span> Recenter Route
             </button>
@@ -177,13 +178,14 @@
   <div id="dataModal" class="modal-overlay">
     <div class="modal-dialog">
       <div class="modal-header">
-        <h3 class="modal-title"><span>⚙️</span> Manage Pandal Database & Sync</h3>
+        <h3 class="modal-title"><span>⚙️</span> Manage Pandal Database & Engine</h3>
         <button id="btnCloseModal" class="btn-close-modal">✕</button>
       </div>
 
       <div class="modal-tabs">
         <button class="modal-tab-btn active" data-modal-tab="tabSync">🌐 Online Sync</button>
         <button class="modal-tab-btn" data-modal-tab="tabAdd">➕ Add Pandal</button>
+        <button class="modal-tab-btn" data-modal-tab="tabMapEngine">🗺️ Google API & Quota</button>
         <button class="modal-tab-btn" data-modal-tab="tabJson">💾 Backup / JSON</button>
       </div>
 
@@ -268,7 +270,66 @@
           </form>
         </div>
 
-        <!-- Tab 3: Backup / JSON -->
+        <!-- Tab 3: Map Engine & Google API Key Configuration -->
+        <div id="tabMapEngine" class="modal-tab-pane">
+          <div style="background: #e8f5e9; border: 1.5px solid #c8e6c9; border-radius: 8px; padding: 0.85rem; margin-bottom: 1rem;">
+            <h4 style="color: #137333; font-size: 0.95rem; margin-bottom: 0.3rem;">🛡️ Automatic Quota Protection Active</h4>
+            <p style="font-size: 0.8rem; color: #333; line-height: 1.4;">
+              You can enter your Google Maps API key safely. The app enforces a <strong>Hard Daily Quota Cap</strong> and will <strong>automatically switch to the free OpenStreetMap engine</strong> if your quota limit is reached or if Google's API is unavailable, guaranteeing $0 unexpected billing!
+            </p>
+          </div>
+
+          <div class="form-group">
+            <label for="googleApiKeyInput">Google Maps API Key (Optional):</label>
+            <input type="password" id="googleApiKeyInput" class="form-control" placeholder="AIzaSy..." autocomplete="off" />
+            <small style="font-size: 0.75rem; color: #666; margin-top: 2px;">Stored securely in your browser's private local storage.</small>
+          </div>
+
+          <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+            <button id="btnSaveGoogleKey" class="btn-primary-modal" style="flex: 1; margin: 0;">
+              💾 Save & Activate Google Maps
+            </button>
+            <button id="btnRemoveGoogleKey" class="btn-secondary-modal" style="flex: 1; margin: 0; background: #ffebee; color: #c62828;">
+              ✕ Clear Key & Use Free OSM
+            </button>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="dailyQuotaLimitInput">Daily Hard Quota Cap (Requests/Day):</label>
+              <input type="number" id="dailyQuotaLimitInput" class="form-control" value="500" min="50" max="5000" />
+            </div>
+            <div class="form-group" style="justify-content: flex-end;">
+              <button id="btnSaveQuotaLimit" class="btn-secondary-modal" style="margin-top: auto; padding: 0.55rem;">
+                Save Quota Cap
+              </button>
+            </div>
+          </div>
+
+          <div style="background: #fdfaf6; border: 1px solid #ebdcd0; border-radius: 8px; padding: 0.75rem; margin: 0.75rem 0;">
+            <div style="font-size: 0.8rem; font-weight: 700; color: #555; margin-bottom: 0.25rem;">Live Quota Meter:</div>
+            <div id="quotaMeterText" style="font-size: 0.9rem; font-weight: 800; color: #1a73e8;">0 / 500 requests used today</div>
+            <small style="font-size: 0.72rem; color: #888;">Resets automatically at midnight.</small>
+          </div>
+
+          <div class="form-group" style="margin-top: 0.85rem;">
+            <label>Preferred Map Provider:</label>
+            <div style="display: flex; gap: 1.25rem; font-size: 0.85rem; margin-top: 0.25rem; flex-wrap: wrap;">
+              <label style="display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer;">
+                <input type="radio" name="mapEngineRadio" id="radioEngineGoogle" value="google" />
+                <span>Google Maps (when key available)</span>
+              </label>
+              <label style="display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer;">
+                <input type="radio" name="mapEngineRadio" id="radioEngineOsm" value="osm" checked />
+                <span>OpenStreetMap (100% Free & Unlimited)</span>
+              </label>
+            </div>
+          </div>
+
+          <div id="mapEngineStatusMsg" class="status-msg"></div>
+        </div>
+
+        <!-- Tab 4: Backup / JSON -->
         <div id="tabJson" class="modal-tab-pane">
           <p style="font-size: 0.85rem; color: #555; margin-bottom: 0.85rem;">
             Export your customized pandal collection as a JSON file or import a backup.
@@ -291,6 +352,6 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <!-- Application Bootstrap -->
-  <script type="module" src="js/app.js?v=6"></script>
+  <script type="module" src="js/app.js?v=7"></script>
 </body>
 </html>

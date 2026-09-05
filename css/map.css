@@ -88,6 +88,42 @@
   transform: translateY(-1px);
 }
 
+.engine-badge {
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.engine-google {
+  background: #e8f5e9;
+  border: 1.5px solid #a5d6a7;
+  color: #1b5e20;
+}
+
+.engine-osm {
+  background: #fff3e0;
+  border: 1.5px solid #ffcc80;
+  color: #e65100;
+}
+
+.engine-notice-banner {
+  display: none;
+  background: #fff8e1;
+  border: 1.5px solid #ffe082;
+  color: #795548;
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  animation: slideDown 0.3s ease-out;
+}
+
 #mapContainer {
   height: 520px;
   width: 100%;

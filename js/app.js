@@ -4,7 +4,8 @@ import { FOOD_SPOTS } from './data/food.js?v=6';
 import { AMENITIES } from './data/amenities.js?v=6';
 import { pandalManager } from './data/pandalManager.js?v=6';
 import { optimizeRouteSequence } from './routing/optimizer.js?v=6';
-import { PujaMapController } from './map.js?v=6';
+import { MapManager } from './mapManager.js?v=7';
+import { CONFIG } from './config.js?v=7';
 import { PandalChecklist } from './checklist.js?v=6';
 import { ItineraryView } from './itinerary.js?v=6';
 import { TurnByTurnNavigation } from './navigation.js?v=6';
@@ -56,10 +57,11 @@ class SharodSathiApp {
   }
 
   initControllers() {
-    // 1. Initialize Map with GPS tracking callback
-    this.mapController = new PujaMapController('mapContainer', {
+    // 1. Initialize Map with Dual-Engine Manager (Google Maps + OpenStreetMap Failover)
+    this.mapController = new MapManager('mapContainer', {
       onPandalToggle: (id) => this.handlePandalToggle(id),
-      onLocationUpdate: (loc, heading) => this.handleLocationUpdate(loc, heading)
+      onLocationUpdate: (loc, heading) => this.handleLocationUpdate(loc, heading),
+      onEngineChange: (engine) => this.updateNavbarEngineDisplay(engine)
     });
 
     // Render all initial map layers
@@ -302,6 +304,92 @@ class SharodSathiApp {
         };
         reader.readAsText(file);
       });
+    }
+
+    // Tab 4: Map Engine & Google API Key Configuration
+    const apiKeyInput = document.getElementById('googleApiKeyInput');
+    const quotaInput = document.getElementById('dailyQuotaLimitInput');
+    const quotaMeterText = document.getElementById('quotaMeterText');
+    const engineStatusMsg = document.getElementById('mapEngineStatusMsg');
+    const btnSaveKey = document.getElementById('btnSaveGoogleKey');
+    const btnRemoveKey = document.getElementById('btnRemoveGoogleKey');
+    const btnSaveQuota = document.getElementById('btnSaveQuotaLimit');
+    const radioGoogle = document.getElementById('radioEngineGoogle');
+    const radioOsm = document.getElementById('radioEngineOsm');
+
+    const updateMapEngineTabUI = () => {
+      if (apiKeyInput) apiKeyInput.value = CONFIG.getGoogleApiKey();
+      if (quotaInput) quotaInput.value = CONFIG.getDailyQuotaLimit();
+      if (quotaMeterText) {
+        quotaMeterText.textContent = `${CONFIG.getTodayUsage()} / ${CONFIG.getDailyQuotaLimit()} requests used today`;
+      }
+      const provider = CONFIG.getMapProvider();
+      if (radioGoogle) radioGoogle.checked = provider === 'google';
+      if (radioOsm) radioOsm.checked = provider === 'osm';
+    };
+
+    updateMapEngineTabUI();
+
+    if (btnSaveKey) {
+      btnSaveKey.addEventListener('click', async () => {
+        const key = apiKeyInput.value.trim();
+        if (!key) {
+          alert('Please enter an API Key.');
+          return;
+        }
+        CONFIG.setGoogleApiKey(key);
+        engineStatusMsg.className = 'status-msg';
+        engineStatusMsg.textContent = '⏳ Testing & Activating Google Maps Engine...';
+        await this.mapController.switchEngine('google', key);
+        updateMapEngineTabUI();
+        engineStatusMsg.className = 'status-msg success';
+        engineStatusMsg.textContent = '✓ Google Maps activated with automatic quota protection!';
+      });
+    }
+
+    if (btnRemoveKey) {
+      btnRemoveKey.addEventListener('click', () => {
+        CONFIG.setGoogleApiKey('');
+        if (apiKeyInput) apiKeyInput.value = '';
+        this.mapController.switchEngine('osm');
+        updateMapEngineTabUI();
+        engineStatusMsg.className = 'status-msg success';
+        engineStatusMsg.textContent = '✓ Removed key and switched to free OpenStreetMap engine.';
+      });
+    }
+
+    if (btnSaveQuota) {
+      btnSaveQuota.addEventListener('click', () => {
+        const val = parseInt(quotaInput.value, 10) || 500;
+        CONFIG.setDailyQuotaLimit(val);
+        updateMapEngineTabUI();
+        alert(`✓ Daily quota limit set to ${val} requests/day.`);
+      });
+    }
+
+    if (radioGoogle) {
+      radioGoogle.addEventListener('change', () => {
+        if (radioGoogle.checked) this.mapController.switchEngine('google');
+      });
+    }
+
+    if (radioOsm) {
+      radioOsm.addEventListener('change', () => {
+        if (radioOsm.checked) this.mapController.switchEngine('osm');
+      });
+    }
+  }
+
+  updateNavbarEngineDisplay(engine) {
+    const badge = document.getElementById('mapEngineBadge');
+    if (badge) {
+      if (engine === 'google') {
+        badge.className = 'engine-badge engine-google';
+        badge.innerHTML = '🟢 <strong>Google Maps</strong> (Active)';
+      } else {
+        badge.className = 'engine-badge engine-osm';
+        badge.innerHTML = '🟠 <strong>OpenStreetMap</strong> (Free Mode)';
+      }
     }
   }
 
